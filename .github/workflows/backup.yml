@@ -26,7 +26,7 @@ jobs:
         id: export
         run: |
           export PYTHONPATH=./
-          python main.py --token_v2 ${{ secrets.NOTION_TOKEN_V2 }} --output_dir ./notion_export
+          python main.py --token_v2 ${{ secrets.NOTION_TOKEN_V2 }} --output ./notion_export
           # 将导出的文件名设置为一个输出变量
           echo "zip_file=$(ls ./notion_export/*.zip)" >> $GITHUB_OUTPUT
           echo "zip_name=$(basename $(ls ./notion_export/*.zip))" >> $GITHUB_OUTPUT
