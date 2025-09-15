@@ -1,0 +1,48 @@
+name: Backup Notion Data
+
+on:
+  workflow_dispatch: # 允许手动触发
+  schedule:
+    - cron: '0 22 * * *' # 每天 UTC 时间 22:00 运行 (相当于北京时间早上6点)
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Run NotionUp to export data
+        id: export
+        run: |
+          export PYTHONPATH=./
+          python main.py --token_v2 ${{ secrets.NOTION_TOKEN_V2 }} --output_dir ./notion_export
+          # 将导出的文件名设置为一个输出变量
+          echo "zip_file=$(ls ./notion_export/*.zip)" >> $GITHUB_OUTPUT
+          echo "zip_name=$(basename $(ls ./notion_export/*.zip))" >> $GITHUB_OUTPUT
+          
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: backup-${{ github.run_number }}-${{ steps.export.outputs.zip_name }}
+          release_name: Notion Backup ${{ github.run_number }} - ${{ steps.export.outputs.zip_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.export.outputs.zip_file }}
+          asset_name: ${{ steps.export.outputs.zip_name }}
+          asset_content_type: application/zip
